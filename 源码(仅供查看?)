@@ -1,117 +1,117 @@
-# ¹ã¶«¿Æ¼¼Ñ§Ôº(ÄÏ³ÇĞ£Çø)Ğ£Ô°ÍøÒ»¼üÈÏÖ¤µÇÂ¼½Å±¾
+# å¹¿ä¸œç§‘æŠ€å­¦é™¢(å—åŸæ ¡åŒº)æ ¡å›­ç½‘ä¸€é”®è®¤è¯ç™»å½•è„šæœ¬
 param(
-    [switch]$y,  # ×Ô¶¯¿ªÆô·À¶ÏÁª
-    [switch]$n   # ×Ô¶¯¹Ø±Õ·À¶ÏÁª£¨Óë-y»¥³â£©
+    [switch]$y,  # è‡ªåŠ¨å¼€å¯é˜²æ–­è”
+    [switch]$n   # è‡ªåŠ¨å…³é—­é˜²æ–­è”ï¼ˆä¸-yäº’æ–¥ï¼‰
 )
 
 Add-Type -AssemblyName System.Web
 
 # --------------------------
-# ¹¤¾ßº¯Êı1£º°´ÈÎÒâ¼üÍË³ö
+# å·¥å…·å‡½æ•°1ï¼šæŒ‰ä»»æ„é”®é€€å‡º
 # --------------------------
 function WaitForKeyAndExit {
     param([int]$ExitCode = 0)
-    Write-Host "`n°´ÈÎÒâ¼üÍË³ö..." -ForegroundColor Cyan
+    Write-Host "`næŒ‰ä»»æ„é”®é€€å‡º..." -ForegroundColor Cyan
     $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
     Exit $ExitCode
 }
 
 # --------------------------
-# ¹¤¾ßº¯Êı2£º²ÎÊı³åÍ»¼ì²é
+# å·¥å…·å‡½æ•°2ï¼šå‚æ•°å†²çªæ£€æŸ¥
 # --------------------------
 function Check-ParamConflict {
     if ($y -and $n) {
-        Write-Host "?? ´íÎó£º-yºÍ-n²ÎÊı²»ÄÜÍ¬Ê±Ê¹ÓÃ£¬Çë½öÑ¡ÔñÆäÖĞÒ»¸ö" -ForegroundColor Red
+        Write-Host "?? é”™è¯¯ï¼š-yå’Œ-nå‚æ•°ä¸èƒ½åŒæ—¶ä½¿ç”¨ï¼Œè¯·ä»…é€‰æ‹©å…¶ä¸­ä¸€ä¸ª" -ForegroundColor Red
         WaitForKeyAndExit -ExitCode 1
     }
 }
 
 # --------------------------
-# ¹¤¾ßº¯Êı3£º¶ÁÈ¡/±£´æÕËºÅÃÜÂë£¨ĞŞ¸´Â·¾¶»ñÈ¡ÎÊÌâ£©
+# å·¥å…·å‡½æ•°3ï¼šè¯»å–/ä¿å­˜è´¦å·å¯†ç ï¼ˆä¿®å¤è·¯å¾„è·å–é—®é¢˜ï¼‰
 # --------------------------
 function Get-AccountInfo {
-    # ³õÊ¼»¯ÕËºÅÃÜÂë±äÁ¿£¨´Ë´¦»á±»½Å±¾×Ô¶¯Ìæ»»ÎªÓÃ»§ÊäÈëµÄÖµ£©
+    # åˆå§‹åŒ–è´¦å·å¯†ç å˜é‡ï¼ˆæ­¤å¤„ä¼šè¢«è„šæœ¬è‡ªåŠ¨æ›¿æ¢ä¸ºç”¨æˆ·è¾“å…¥çš„å€¼ï¼‰
     $savedUsername = ""
     $savedPassword = ""
 
-    # ÈôÒÑ±£´æÕËºÅÃÜÂë£¬Ö±½Ó·µ»Ø
+    # è‹¥å·²ä¿å­˜è´¦å·å¯†ç ï¼Œç›´æ¥è¿”å›
     if (-not [string]::IsNullOrWhiteSpace($savedUsername) -and -not [string]::IsNullOrWhiteSpace($savedPassword)) {
         return $savedUsername, $savedPassword
     }
 
-    # Î´±£´æÊ±ÌáÊ¾ÓÃ»§ÊäÈë
-    Write-Host "`n¼ì²âµ½Î´±£´æÕËºÅÃÜÂë£¬ÇëÊäÈëĞ£Ô°ÍøÈÏÖ¤ĞÅÏ¢" -ForegroundColor Cyan
-    $username = Read-Host "ÇëÊäÈëÕËºÅ£¨Í¨³£ÎªÑ§ºÅ£©"
+    # æœªä¿å­˜æ—¶æç¤ºç”¨æˆ·è¾“å…¥
+    Write-Host "`næ£€æµ‹åˆ°æœªä¿å­˜è´¦å·å¯†ç ï¼Œè¯·è¾“å…¥æ ¡å›­ç½‘è®¤è¯ä¿¡æ¯" -ForegroundColor Cyan
+    $username = Read-Host "è¯·è¾“å…¥è´¦å·ï¼ˆé€šå¸¸ä¸ºå­¦å·ï¼‰"
     while ([string]::IsNullOrWhiteSpace($username)) {
-        Write-Host "?? ÕËºÅ²»ÄÜÎª¿Õ£¡" -ForegroundColor Red
-        $username = Read-Host "ÇëÖØĞÂÊäÈëÕËºÅ"
+        Write-Host "?? è´¦å·ä¸èƒ½ä¸ºç©ºï¼" -ForegroundColor Red
+        $username = Read-Host "è¯·é‡æ–°è¾“å…¥è´¦å·"
     }
 
-    $password = Read-Host "ÇëÊäÈëÃÜÂë" -AsSecureString
+    $password = Read-Host "è¯·è¾“å…¥å¯†ç " -AsSecureString
     $passwordPlain = [System.Net.NetworkCredential]::new("", $password).Password
     while ([string]::IsNullOrWhiteSpace($passwordPlain)) {
-        Write-Host "?? ÃÜÂë²»ÄÜÎª¿Õ£¡" -ForegroundColor Red
-        $password = Read-Host "ÇëÖØĞÂÊäÈëÃÜÂë" -AsSecureString
+        Write-Host "?? å¯†ç ä¸èƒ½ä¸ºç©ºï¼" -ForegroundColor Red
+        $password = Read-Host "è¯·é‡æ–°è¾“å…¥å¯†ç " -AsSecureString
         $passwordPlain = [System.Net.NetworkCredential]::new("", $password).Password
     }
 
-    # ĞŞ¸´£º¿É¿¿»ñÈ¡½Å±¾Â·¾¶£¨¼æÈİËùÓĞ»·¾³£©
+    # ä¿®å¤ï¼šå¯é è·å–è„šæœ¬è·¯å¾„ï¼ˆå…¼å®¹æ‰€æœ‰ç¯å¢ƒï¼‰
     try {
-        # ·½·¨1£ºÓÅÏÈÊ¹ÓÃ$PSCommandPath£¨PowerShell 3.0+¸ü¿É¿¿£©
+        # æ–¹æ³•1ï¼šä¼˜å…ˆä½¿ç”¨$PSCommandPathï¼ˆPowerShell 3.0+æ›´å¯é ï¼‰
         if (-not [string]::IsNullOrWhiteSpace($PSCommandPath)) {
             $scriptPath = $PSCommandPath
         }
-        # ·½·¨2£º fallbackµ½$MyInvocation£¨¼æÈİµÍ°æ±¾£©
+        # æ–¹æ³•2ï¼š fallbackåˆ°$MyInvocationï¼ˆå…¼å®¹ä½ç‰ˆæœ¬ï¼‰
         else {
             $scriptPath = $MyInvocation.MyCommand.Path
         }
 
-        # ÑéÖ¤Â·¾¶ÊÇ·ñÓĞĞ§
+        # éªŒè¯è·¯å¾„æ˜¯å¦æœ‰æ•ˆ
         if (-not (Test-Path -Path $scriptPath -PathType Leaf)) {
-            throw "½Å±¾Â·¾¶ÎŞĞ§£¬ÇëÊÖ¶¯±£´æÕËºÅÃÜÂë"
+            throw "è„šæœ¬è·¯å¾„æ— æ•ˆï¼Œè¯·æ‰‹åŠ¨ä¿å­˜è´¦å·å¯†ç "
         }
 
-        # ¶ÁÈ¡½Å±¾ÄÚÈİ£¨¼æÈİËùÓĞ°æ±¾£©
+        # è¯»å–è„šæœ¬å†…å®¹ï¼ˆå…¼å®¹æ‰€æœ‰ç‰ˆæœ¬ï¼‰
         $scriptContent = (Get-Content -Path $scriptPath) -join "`n"
 
-        # Ìæ»»ÕËºÅÃÜÂë£¨¾«È·Æ¥Åä±äÁ¿ĞĞ£©
+        # æ›¿æ¢è´¦å·å¯†ç ï¼ˆç²¾ç¡®åŒ¹é…å˜é‡è¡Œï¼‰
         $updatedContent = $scriptContent -replace '(?m)^(\s*)\$savedUsername\s*=\s*""', "`$1`$savedUsername = `"$username`"" `
                                         -replace '(?m)^(\s*)\$savedPassword\s*=\s*""', "`$1`$savedPassword = `"$passwordPlain`""
 
-        # Ğ´Èë½Å±¾
+        # å†™å…¥è„šæœ¬
         Set-Content -Path $scriptPath -Value $updatedContent -Force
-        Write-Host "?? ÕËºÅÃÜÂëÒÑ±£´æ£¬ÏÂ´ÎÔËĞĞÎŞĞèÖØ¸´ÊäÈë" -ForegroundColor Green
+        Write-Host "?? è´¦å·å¯†ç å·²ä¿å­˜ï¼Œä¸‹æ¬¡è¿è¡Œæ— éœ€é‡å¤è¾“å…¥" -ForegroundColor Green
     } catch {
-        Write-Host "???? ¾¯¸æ£º×Ô¶¯±£´æÊ§°Ü£¬ÇëÊÖ¶¯ĞŞ¸Ä½Å±¾±£´æÕËºÅÃÜÂë" -ForegroundColor Yellow
-        Write-Host "   ´íÎóÔ­Òò£º$_" -ForegroundColor Yellow
-        Write-Host "   ÊÖ¶¯ĞŞ¸Ä·½·¨£ºÓÃ¼ÇÊÂ±¾´ò¿ª½Å±¾£¬ÕÒµ½ÒÔÏÂÁ½ĞĞ²¢ÌîÈëĞÅÏ¢£º" -ForegroundColor Yellow
-        Write-Host "   `$savedUsername = `"ÄãµÄÕËºÅ`"" -ForegroundColor Yellow
-        Write-Host "   `$savedPassword = `"ÄãµÄÃÜÂë`"" -ForegroundColor Yellow
+        Write-Host "???? è­¦å‘Šï¼šè‡ªåŠ¨ä¿å­˜å¤±è´¥ï¼Œè¯·æ‰‹åŠ¨ä¿®æ”¹è„šæœ¬ä¿å­˜è´¦å·å¯†ç " -ForegroundColor Yellow
+        Write-Host "   é”™è¯¯åŸå› ï¼š$_" -ForegroundColor Yellow
+        Write-Host "   æ‰‹åŠ¨ä¿®æ”¹æ–¹æ³•ï¼šç”¨è®°äº‹æœ¬æ‰“å¼€è„šæœ¬ï¼Œæ‰¾åˆ°ä»¥ä¸‹ä¸¤è¡Œå¹¶å¡«å…¥ä¿¡æ¯ï¼š" -ForegroundColor Yellow
+        Write-Host "   `$savedUsername = `"ä½ çš„è´¦å·`"" -ForegroundColor Yellow
+        Write-Host "   `$savedPassword = `"ä½ çš„å¯†ç `"" -ForegroundColor Yellow
     }
 
     return $username, $passwordPlain
 }
 
 # --------------------------
-# ¹¤¾ßº¯Êı4£ºÌáÈ¡·şÎñÆ÷·µ»ØÖĞÎÄ
+# å·¥å…·å‡½æ•°4ï¼šæå–æœåŠ¡å™¨è¿”å›ä¸­æ–‡
 # --------------------------
 function Get-ChineseContent {
     param([string]$InputContent)
     $cleanContent = $InputContent -replace "<.*?>", "" `
-        -replace '"Î¢ÈíÑÅºÚ"|"ËÎÌå"|"ºÚÌå|Helvetica|Arial|sans-serif', "" `
+        -replace '"å¾®è½¯é›…é»‘"|"å®‹ä½“"|"é»‘ä½“|Helvetica|Arial|sans-serif', "" `
         -replace '""|,""|,"|[a-zA-Z0-9_./?&=;:+-]+', "" `
         -replace "\s+", " " `
-        -replace '[^\u4e00-\u9fa5£¬¡££¡£»£º""''£¨£©¡¾¡¿¡¢¡­ ]', ""
+        -replace '[^\u4e00-\u9fa5ï¼Œã€‚ï¼ï¼›ï¼š""''ï¼ˆï¼‰ã€ã€‘ã€â€¦ ]', ""
     $cleanContent = $cleanContent.Trim()
     
-    $chinesePattern = '([\u4e00-\u9fa5£¬¡££¡£»£º""''£¨£©¡¾¡¿¡¢¡­ ]{2,})'
+    $chinesePattern = '([\u4e00-\u9fa5ï¼Œã€‚ï¼ï¼›ï¼š""''ï¼ˆï¼‰ã€ã€‘ã€â€¦ ]{2,})'
     $chineseMatches = [regex]::Matches($cleanContent, $chinesePattern)
     $chineseContent = $chineseMatches | ForEach-Object { $_.Value.Trim() } | Where-Object { $_ -ne "" } | Select-Object -Unique
-    return $chineseContent -join "£»"
+    return $chineseContent -join "ï¼›"
 }
 
 # --------------------------
-# ¹¤¾ßº¯Êı5£ººËĞÄÈÏÖ¤Á÷³Ì
+# å·¥å…·å‡½æ•°5ï¼šæ ¸å¿ƒè®¤è¯æµç¨‹
 # --------------------------
 function Start-AuthFlow {
     param(
@@ -121,7 +121,7 @@ function Start-AuthFlow {
         [bool]$IsReconnect = $false
     )
 
-    # ²½Öè1£º»ñÈ¡Íø¿¨ĞÅÏ¢
+    # æ­¥éª¤1ï¼šè·å–ç½‘å¡ä¿¡æ¯
     try {
         $adapter = Get-NetAdapter | Where-Object {
             ($_.InterfaceDescription -match "WLAN" -or $_.InterfaceDescription -match "Ethernet") -and
@@ -135,7 +135,7 @@ function Start-AuthFlow {
         } | Select-Object -First 1
 
         if (-not $adapter) {
-            Write-Host "[´íÎó] Î´ÕÒµ½¿ÉÓÃÍø¿¨£¨ĞèWLAN/ÒÔÌ«Íø+IPv4+·ÇvEthernet£©" -ForegroundColor Red
+            Write-Host "[é”™è¯¯] æœªæ‰¾åˆ°å¯ç”¨ç½‘å¡ï¼ˆéœ€WLAN/ä»¥å¤ªç½‘+IPv4+évEthernetï¼‰" -ForegroundColor Red
             return $false, $null, $null
         }
 
@@ -143,18 +143,18 @@ function Start-AuthFlow {
         $clientMac = $adapter.MacAddress
         $timestamp = [Math]::Floor([decimal](Get-Date -UFormat %s))
         
-        # Çø·ÖÊ×´ÎÈÏÖ¤ºÍÖØÁ¬µÄ»ù´¡ĞÅÏ¢ÌáÊ¾
+        # åŒºåˆ†é¦–æ¬¡è®¤è¯å’Œé‡è¿çš„åŸºç¡€ä¿¡æ¯æç¤º
         if ($IsReconnect) {
-            Write-Host "[ÖØÁ¬-»ù´¡ĞÅÏ¢] Íø¿¨£º$($adapter.InterfaceDescription) | IP£º$wlanUserIp | MAC£º$clientMac" -ForegroundColor Cyan
+            Write-Host "[é‡è¿-åŸºç¡€ä¿¡æ¯] ç½‘å¡ï¼š$($adapter.InterfaceDescription) | IPï¼š$wlanUserIp | MACï¼š$clientMac" -ForegroundColor Cyan
         } else {
-            Write-Host "[Ê×´ÎÈÏÖ¤-»ù´¡ĞÅÏ¢] Íø¿¨£º$($adapter.InterfaceDescription) | IP£º$wlanUserIp | MAC£º$clientMac" -ForegroundColor Cyan
+            Write-Host "[é¦–æ¬¡è®¤è¯-åŸºç¡€ä¿¡æ¯] ç½‘å¡ï¼š$($adapter.InterfaceDescription) | IPï¼š$wlanUserIp | MACï¼š$clientMac" -ForegroundColor Cyan
         }
     } catch {
-        Write-Host "[´íÎó] »ñÈ¡Íø¿¨²ÎÊıÊ§°Ü£º$_" -ForegroundColor Red
+        Write-Host "[é”™è¯¯] è·å–ç½‘å¡å‚æ•°å¤±è´¥ï¼š$_" -ForegroundColor Red
         return $false, $null, $null
     }
 
-    # ²½Öè2£º³õÊ¼ÈÏÖ¤£¨»ñÈ¡¶ş´ÎÈÏÖ¤µØÖ·£©
+    # æ­¥éª¤2ï¼šåˆå§‹è®¤è¯ï¼ˆè·å–äºŒæ¬¡è®¤è¯åœ°å€ï¼‰
     $webSession = New-Object Microsoft.PowerShell.Commands.WebRequestSession
     $ajaxUrlFromForm = $null
     try {
@@ -174,7 +174,7 @@ function Start-AuthFlow {
             fail = "http://8.135.34.165/lfradius/libs/portal/unify/portal.php/login/fail"
         }
 
-        # ¹¹ÔìPOSTÇëÇóÌå
+        # æ„é€ POSTè¯·æ±‚ä½“
         $encodedKeyValues = @()
         foreach ($key in $postParams.Keys) {
             $encodedValue = [System.Web.HttpUtility]::UrlEncode($postParams[$key])
@@ -182,11 +182,11 @@ function Start-AuthFlow {
         }
         $encodedBody = $encodedKeyValues -join "&"
 
-        # Çø·ÖÊ×´ÎÈÏÖ¤ºÍÖØÁ¬µÄ²½ÖèÌáÊ¾
+        # åŒºåˆ†é¦–æ¬¡è®¤è¯å’Œé‡è¿çš„æ­¥éª¤æç¤º
         if ($IsReconnect) {
-            Write-Host "[ÖØÁ¬-²½Öè1] ·¢ËÍÈÏÖ¤ÇëÇó..." -ForegroundColor Cyan
+            Write-Host "[é‡è¿-æ­¥éª¤1] å‘é€è®¤è¯è¯·æ±‚..." -ForegroundColor Cyan
         } else {
-            Write-Host "[Ê×´ÎÈÏÖ¤-²½Öè1] ·¢ËÍ³õÊ¼ÈÏÖ¤ÇëÇó..." -ForegroundColor Cyan
+            Write-Host "[é¦–æ¬¡è®¤è¯-æ­¥éª¤1] å‘é€åˆå§‹è®¤è¯è¯·æ±‚..." -ForegroundColor Cyan
         }
         
         $response1 = Invoke-WebRequest -Uri "http://8.135.34.165/lfradius/libs/portal/unify/portal.php/login/Panabit_login" `
@@ -210,30 +210,30 @@ function Start-AuthFlow {
             $chineseTip1 = Get-ChineseContent -InputContent $serverContent1
             if ($chineseTip1) { 
                 if ($IsReconnect) {
-                    Write-Host "[ÖØÁ¬-·şÎñÆ÷ÌáÊ¾] $chineseTip1" -ForegroundColor Magenta
+                    Write-Host "[é‡è¿-æœåŠ¡å™¨æç¤º] $chineseTip1" -ForegroundColor Magenta
                 } else {
-                    Write-Host "[Ê×´ÎÈÏÖ¤-·şÎñÆ÷ÌáÊ¾] $chineseTip1" -ForegroundColor Magenta
+                    Write-Host "[é¦–æ¬¡è®¤è¯-æœåŠ¡å™¨æç¤º] $chineseTip1" -ForegroundColor Magenta
                 }
             }
 
-            # ÌáÈ¡¶ş´ÎÈÏÖ¤µØÖ·
+            # æå–äºŒæ¬¡è®¤è¯åœ°å€
             if ($serverContent1 -match '<form name="login" action="([^"]+)" method="post"') {
                 $ajaxUrlFromForm = $matches[1]
                 if ($IsReconnect) {
-                    Write-Host "[ÖØÁ¬-»ù´¡ĞÅÏ¢] ÌáÈ¡ÈÏÖ¤µØÖ·£º$ajaxUrlFromForm" -ForegroundColor Cyan
+                    Write-Host "[é‡è¿-åŸºç¡€ä¿¡æ¯] æå–è®¤è¯åœ°å€ï¼š$ajaxUrlFromForm" -ForegroundColor Cyan
                 } else {
-                    Write-Host "[Ê×´ÎÈÏÖ¤-»ù´¡ĞÅÏ¢] ÌáÈ¡¶ş´ÎÈÏÖ¤µØÖ·£º$ajaxUrlFromForm" -ForegroundColor Cyan
+                    Write-Host "[é¦–æ¬¡è®¤è¯-åŸºç¡€ä¿¡æ¯] æå–äºŒæ¬¡è®¤è¯åœ°å€ï¼š$ajaxUrlFromForm" -ForegroundColor Cyan
                 }
             }
         } else {
-            throw "ÈÏÖ¤Ê§°Ü£¬×´Ì¬Âë£º$($response1.StatusCode)"
+            throw "è®¤è¯å¤±è´¥ï¼ŒçŠ¶æ€ç ï¼š$($response1.StatusCode)"
         }
     } catch {
-        Write-Host "[´íÎó] ÈÏÖ¤ÇëÇóÊ§°Ü£º$_" -ForegroundColor Red
+        Write-Host "[é”™è¯¯] è®¤è¯è¯·æ±‚å¤±è´¥ï¼š$_" -ForegroundColor Red
         return $false, $null, $null
     }
 
-    # ²½Öè3£º¶ş´ÎÈÏÖ¤£¨ºËĞÄµÇÂ¼£©
+    # æ­¥éª¤3ï¼šäºŒæ¬¡è®¤è¯ï¼ˆæ ¸å¿ƒç™»å½•ï¼‰
     try {
         $ajaxParams = @{
             action = "login"
@@ -245,7 +245,7 @@ function Start-AuthFlow {
             fail = $postParams.fail
         }
 
-        # ¹¹ÔìPOSTÇëÇóÌå
+        # æ„é€ POSTè¯·æ±‚ä½“
         $ajaxKeyValues = @()
         foreach ($key in $ajaxParams.Keys) {
             $encodedVal = [System.Web.HttpUtility]::UrlEncode($ajaxParams[$key])
@@ -255,11 +255,11 @@ function Start-AuthFlow {
 
         $ajaxUrl = if ($ajaxUrlFromForm) { $ajaxUrlFromForm } else { "http://172.18.100.100:8010/cgi-bin/webauth/ajax_webauth" }
         
-        # Çø·ÖÊ×´ÎÈÏÖ¤ºÍÖØÁ¬µÄ²½ÖèÌáÊ¾
+        # åŒºåˆ†é¦–æ¬¡è®¤è¯å’Œé‡è¿çš„æ­¥éª¤æç¤º
         if ($IsReconnect) {
-            Write-Host "[ÖØÁ¬-²½Öè2] ·¢ËÍµÇÂ¼ÇëÇó..." -ForegroundColor Cyan
+            Write-Host "[é‡è¿-æ­¥éª¤2] å‘é€ç™»å½•è¯·æ±‚..." -ForegroundColor Cyan
         } else {
-            Write-Host "[Ê×´ÎÈÏÖ¤-²½Öè2] ·¢ËÍ¶ş´ÎÈÏÖ¤ÇëÇó..." -ForegroundColor Cyan
+            Write-Host "[é¦–æ¬¡è®¤è¯-æ­¥éª¤2] å‘é€äºŒæ¬¡è®¤è¯è¯·æ±‚..." -ForegroundColor Cyan
         }
         
         $response2 = Invoke-WebRequest -Uri $ajaxUrl `
@@ -283,45 +283,45 @@ function Start-AuthFlow {
         $chineseTip2 = Get-ChineseContent -InputContent $serverContent2
         if ($chineseTip2) { 
             if ($IsReconnect) {
-                Write-Host "[ÖØÁ¬-·şÎñÆ÷ÌáÊ¾] $chineseTip2" -ForegroundColor Magenta
+                Write-Host "[é‡è¿-æœåŠ¡å™¨æç¤º] $chineseTip2" -ForegroundColor Magenta
             } else {
-                Write-Host "[Ê×´ÎÈÏÖ¤-·şÎñÆ÷ÌáÊ¾] $chineseTip2" -ForegroundColor Magenta
+                Write-Host "[é¦–æ¬¡è®¤è¯-æœåŠ¡å™¨æç¤º] $chineseTip2" -ForegroundColor Magenta
             }
         }
 
-        # Çø·ÖÊ×´ÎÈÏÖ¤ºÍÖØÁ¬µÄ½á¹ûÌáÊ¾
+        # åŒºåˆ†é¦–æ¬¡è®¤è¯å’Œé‡è¿çš„ç»“æœæç¤º
         if ($IsReconnect) {
-            Write-Host "[ÖØÁ¬-½á¹û] µÇÂ¼³É¹¦" -ForegroundColor Green
+            Write-Host "[é‡è¿-ç»“æœ] ç™»å½•æˆåŠŸ" -ForegroundColor Green
         } else {
-            Write-Host "[Ê×´ÎÈÏÖ¤-½á¹û] ¶ş´ÎÈÏÖ¤³É¹¦" -ForegroundColor Green
+            Write-Host "[é¦–æ¬¡è®¤è¯-ç»“æœ] äºŒæ¬¡è®¤è¯æˆåŠŸ" -ForegroundColor Green
         }
         return $true, $wlanUserIp, $clientMac
     } catch {
-        Write-Host "[´íÎó] µÇÂ¼ÇëÇóÊ§°Ü£º$_" -ForegroundColor Red
+        Write-Host "[é”™è¯¯] ç™»å½•è¯·æ±‚å¤±è´¥ï¼š$_" -ForegroundColor Red
         return $false, $null, $null
     }
 }
 
 # --------------------------
-# Ö÷Á÷³Ì£º²ÎÊı¼ì²é+ÕËºÅÃÜÂë»ñÈ¡+ÈÏÖ¤
+# ä¸»æµç¨‹ï¼šå‚æ•°æ£€æŸ¥+è´¦å·å¯†ç è·å–+è®¤è¯
 # --------------------------
 Check-ParamConflict
 
-# »ñÈ¡ÕËºÅÃÜÂë£¨Ê×´ÎÊäÈëºó×Ô¶¯±£´æ£©
+# è·å–è´¦å·å¯†ç ï¼ˆé¦–æ¬¡è¾“å…¥åè‡ªåŠ¨ä¿å­˜ï¼‰
 $usrname, $passwordPlain = Get-AccountInfo
 
-# µ÷ÓÃÈÏÖ¤º¯ÊıÖ´ĞĞÊ×´ÎÈÏÖ¤
+# è°ƒç”¨è®¤è¯å‡½æ•°æ‰§è¡Œé¦–æ¬¡è®¤è¯
 $firstAuthSuccess, $userIp, $userMac = Start-AuthFlow -Username $usrname -Password $passwordPlain -Basip "172.18.100.100" -IsReconnect $false
 if (-not $firstAuthSuccess) {
-    Write-Host "[×îÖÕ½á¹û] Ê×´ÎÈÏÖ¤Ê§°Ü£¬½Å±¾ÍË³ö" -ForegroundColor Red
+    Write-Host "[æœ€ç»ˆç»“æœ] é¦–æ¬¡è®¤è¯å¤±è´¥ï¼Œè„šæœ¬é€€å‡º" -ForegroundColor Red
     WaitForKeyAndExit -ExitCode 1
 }
 
 # --------------------------
-# ²½Öè4£ºcurlÑéÖ¤ÍøÂçÁ¬Í¨ĞÔ
+# æ­¥éª¤4ï¼šcurléªŒè¯ç½‘ç»œè¿é€šæ€§
 # --------------------------
 Write-Host "`n==================================================" -ForegroundColor Cyan
-Write-Host "ÕıÔÚÑéÖ¤ÍøÂçÁ¬Í¨ĞÔ£¨curlÇëÇóbing.com£©..." -ForegroundColor Cyan
+Write-Host "æ­£åœ¨éªŒè¯ç½‘ç»œè¿é€šæ€§ï¼ˆcurlè¯·æ±‚bing.comï¼‰..." -ForegroundColor Cyan
 $curlSuccess = $false
 try {
     $curlPath = "C:\Windows\System32\curl.exe"
@@ -329,57 +329,57 @@ try {
     $curlOutput = & $curlPath $curlArgs 2>&1
 
     if ($curlOutput -match '^(200|3\d{2})$') {
-        Write-Host "?? Ê×´ÎÈÏÖ¤³É¹¦£¡ÍøÂçÒÑÁ¬Í¨£¨HTTP×´Ì¬Âë£º$matches[0]£©" -ForegroundColor Green
-        Write-Host "?? ÈÏÖ¤ĞÅÏ¢£º" -ForegroundColor Cyan
-        Write-Host "   ÕËºÅ£º$usrname" -ForegroundColor Cyan
-        Write-Host "   IPµØÖ·£º$userIp" -ForegroundColor Cyan
-        Write-Host "   MACµØÖ·£º$userMac" -ForegroundColor Cyan
+        Write-Host "?? é¦–æ¬¡è®¤è¯æˆåŠŸï¼ç½‘ç»œå·²è¿é€šï¼ˆHTTPçŠ¶æ€ç ï¼š$matches[0]ï¼‰" -ForegroundColor Green
+        Write-Host "?? è®¤è¯ä¿¡æ¯ï¼š" -ForegroundColor Cyan
+        Write-Host "   è´¦å·ï¼š$usrname" -ForegroundColor Cyan
+        Write-Host "   IPåœ°å€ï¼š$userIp" -ForegroundColor Cyan
+        Write-Host "   MACåœ°å€ï¼š$userMac" -ForegroundColor Cyan
         $curlSuccess = $true
     } else {
-        $errorMsg = if ($curlOutput -is [Management.Automation.ErrorRecord]) { $curlOutput.Exception.Message } else { "HTTP×´Ì¬Âë£º$curlOutput" }
-        Write-Host "?? Ê×´ÎÈÏÖ¤Ê§°Ü£¡ÍøÂçÎ´Á¬Í¨£º$errorMsg" -ForegroundColor Red
+        $errorMsg = if ($curlOutput -is [Management.Automation.ErrorRecord]) { $curlOutput.Exception.Message } else { "HTTPçŠ¶æ€ç ï¼š$curlOutput" }
+        Write-Host "?? é¦–æ¬¡è®¤è¯å¤±è´¥ï¼ç½‘ç»œæœªè¿é€šï¼š$errorMsg" -ForegroundColor Red
     }
 } catch {
-    Write-Host "?? Ê×´ÎÈÏÖ¤Ê§°Ü£¡curlÖ´ĞĞÒì³££º$_" -ForegroundColor Red
+    Write-Host "?? é¦–æ¬¡è®¤è¯å¤±è´¥ï¼curlæ‰§è¡Œå¼‚å¸¸ï¼š$_" -ForegroundColor Red
 }
 Write-Host "==================================================" -ForegroundColor Cyan
 
-# ÈôcurlÑéÖ¤Ê§°Ü£¬°´ÈÎÒâ¼üÍË³ö
+# è‹¥curléªŒè¯å¤±è´¥ï¼ŒæŒ‰ä»»æ„é”®é€€å‡º
 if (-not $curlSuccess) {
     WaitForKeyAndExit -ExitCode 1
 }
 
 # --------------------------
-# ·À¶ÏÁªÂß¼­£¨Ö§³Ö-y/-n²ÎÊı£¬ĞÂÔö½»»¥Ê½yµÄ·´À¡£©
+# é˜²æ–­è”é€»è¾‘ï¼ˆæ”¯æŒ-y/-nå‚æ•°ï¼Œæ–°å¢äº¤äº’å¼yçš„åé¦ˆï¼‰
 # --------------------------
 if ($y) {
-    Write-Host "`n¼ì²âµ½²ÎÊı-y£¬³É¹¦¿ªÆô·À¶ÏÁª½ø³Ì£¡£¨Õı³£ÎŞÊä³ö£¬½ö´íÎóÊ±ÌáĞÑ£¬°´ Ctrl+C ÍË³ö£©" -ForegroundColor Green
+    Write-Host "`næ£€æµ‹åˆ°å‚æ•°-yï¼ŒæˆåŠŸå¼€å¯é˜²æ–­è”è¿›ç¨‹ï¼ï¼ˆæ­£å¸¸æ— è¾“å‡ºï¼Œä»…é”™è¯¯æ—¶æé†’ï¼ŒæŒ‰ Ctrl+C é€€å‡ºï¼‰" -ForegroundColor Green
     Write-Host "==================================================" -ForegroundColor Cyan
     $startAntiDisconnect = $true
 } elseif ($n) {
-    Write-Host "`n¼ì²âµ½²ÎÊı-n£¬×Ô¶¯²»¿ªÆô·À¶ÏÁª½ø³Ì£¬½Å±¾ÍË³ö" -ForegroundColor Green
+    Write-Host "`næ£€æµ‹åˆ°å‚æ•°-nï¼Œè‡ªåŠ¨ä¸å¼€å¯é˜²æ–­è”è¿›ç¨‹ï¼Œè„šæœ¬é€€å‡º" -ForegroundColor Green
     $startAntiDisconnect = $false
 } else {
     do {
-        Write-Host "`nÊÇ·ñ¿ªÆô·À¶ÏÁª½ø³Ì£¿£¨Õı³£ÎŞÌáÊ¾£¬½ö´íÎóÊ±ÌáĞÑ£¬°´ Ctrl+C ÍË³ö£©[Y/N]" -ForegroundColor Cyan
-        $userInput = Read-Host "ÇëÊäÈë Y »ò N"
+        Write-Host "`næ˜¯å¦å¼€å¯é˜²æ–­è”è¿›ç¨‹ï¼Ÿï¼ˆæ­£å¸¸æ— æç¤ºï¼Œä»…é”™è¯¯æ—¶æé†’ï¼ŒæŒ‰ Ctrl+C é€€å‡ºï¼‰[Y/N]" -ForegroundColor Cyan
+        $userInput = Read-Host "è¯·è¾“å…¥ Y æˆ– N"
         $userInput = $userInput.Trim().ToUpper()
         if ($userInput -notin "Y", "N") {
-            Write-Host "?? ÊäÈëÎŞĞ§£¡Çë½öÊäÈë Y£¨ÊÇ£©»ò N£¨·ñ£©" -ForegroundColor Red
+            Write-Host "?? è¾“å…¥æ— æ•ˆï¼è¯·ä»…è¾“å…¥ Yï¼ˆæ˜¯ï¼‰æˆ– Nï¼ˆå¦ï¼‰" -ForegroundColor Red
         }
     } while ($userInput -notin "Y", "N")
     
     if ($userInput -eq "Y") {
         $startAntiDisconnect = $true
-        # ĞÂÔö£º½»»¥Ê½ÊäÈëyÊ±µÄ·´À¡ÌáÊ¾
-        Write-Host "`n?? ³É¹¦¿ªÆô·À¶ÏÁª½ø³Ì£¡£¨Õı³£ÎŞÊä³ö£¬½ö´íÎóÊ±ÌáĞÑ£¬°´ Ctrl+C ÍË³ö£©" -ForegroundColor Green
+        # æ–°å¢ï¼šäº¤äº’å¼è¾“å…¥yæ—¶çš„åé¦ˆæç¤º
+        Write-Host "`n?? æˆåŠŸå¼€å¯é˜²æ–­è”è¿›ç¨‹ï¼ï¼ˆæ­£å¸¸æ— è¾“å‡ºï¼Œä»…é”™è¯¯æ—¶æé†’ï¼ŒæŒ‰ Ctrl+C é€€å‡ºï¼‰" -ForegroundColor Green
         Write-Host "==================================================" -ForegroundColor Cyan
     } else {
         $startAntiDisconnect = $false
     }
 }
 
-# Ö´ĞĞ·À¶ÏÁª»òÍË³ö
+# æ‰§è¡Œé˜²æ–­è”æˆ–é€€å‡º
 if ($startAntiDisconnect) {
     while ($true) {
         Start-Sleep -Seconds 5
@@ -387,7 +387,7 @@ if ($startAntiDisconnect) {
             $curlOutputLoop = & $curlPath $curlArgs 2>&1
             if (-not ($curlOutputLoop -match '^(200|3\d{2})$')) {
                 Write-Host "`n==================================================" -ForegroundColor Red
-                Write-Host "?? ÍøÂç¶Ï¿ª£¡¿ªÊ¼³¢ÊÔÖØÁ¬..." -ForegroundColor Red
+                Write-Host "?? ç½‘ç»œæ–­å¼€ï¼å¼€å§‹å°è¯•é‡è¿..." -ForegroundColor Red
                 Write-Host "==================================================" -ForegroundColor Red
                 
                 $reconnectSuccess, $reconnectIp, $reconnectMac = Start-AuthFlow -Username $usrname -Password $passwordPlain -Basip "172.18.100.100" -IsReconnect $true
@@ -395,30 +395,30 @@ if ($startAntiDisconnect) {
                 if ($reconnectSuccess) {
                     $reconnectCurl = & $curlPath $curlArgs 2>&1
                     if ($reconnectCurl -match '^(200|3\d{2})$') {
-                        Write-Host "`n?? ÖØÁ¬³É¹¦£¡ÍøÂçÒÑ»Ö¸´" -ForegroundColor Green
-                        Write-Host "?? µ±Ç°Á¬½ÓĞÅÏ¢£º" -ForegroundColor Cyan
-                        Write-Host "   ÕËºÅ£º$usrname" -ForegroundColor Cyan
-                        Write-Host "   IPµØÖ·£º$reconnectIp" -ForegroundColor Cyan
-                        Write-Host "   MACµØÖ·£º$reconnectMac" -ForegroundColor Cyan
+                        Write-Host "`n?? é‡è¿æˆåŠŸï¼ç½‘ç»œå·²æ¢å¤" -ForegroundColor Green
+                        Write-Host "?? å½“å‰è¿æ¥ä¿¡æ¯ï¼š" -ForegroundColor Cyan
+                        Write-Host "   è´¦å·ï¼š$usrname" -ForegroundColor Cyan
+                        Write-Host "   IPåœ°å€ï¼š$reconnectIp" -ForegroundColor Cyan
+                        Write-Host "   MACåœ°å€ï¼š$reconnectMac" -ForegroundColor Cyan
                         Write-Host "==================================================" -ForegroundColor Green
                     } else {
-                        Write-Host "`n?? ÖØÁ¬Ê§°Ü£¡ÍøÂçÈÔÎ´Á¬Í¨" -ForegroundColor Red
-                        Write-Host "[×îÖÕ½á¹û] ÖØÁ¬Ê§°Ü£¬½Å±¾ÍË³ö" -ForegroundColor Red
+                        Write-Host "`n?? é‡è¿å¤±è´¥ï¼ç½‘ç»œä»æœªè¿é€š" -ForegroundColor Red
+                        Write-Host "[æœ€ç»ˆç»“æœ] é‡è¿å¤±è´¥ï¼Œè„šæœ¬é€€å‡º" -ForegroundColor Red
                         WaitForKeyAndExit -ExitCode 1
                     }
                 } else {
-                    Write-Host "`n?? ÖØÁ¬Ê§°Ü£¡ÈÏÖ¤Á÷³ÌÖ´ĞĞ´íÎó" -ForegroundColor Red
-                    Write-Host "[×îÖÕ½á¹û] ÖØÁ¬Ê§°Ü£¬½Å±¾ÍË³ö" -ForegroundColor Red
+                    Write-Host "`n?? é‡è¿å¤±è´¥ï¼è®¤è¯æµç¨‹æ‰§è¡Œé”™è¯¯" -ForegroundColor Red
+                    Write-Host "[æœ€ç»ˆç»“æœ] é‡è¿å¤±è´¥ï¼Œè„šæœ¬é€€å‡º" -ForegroundColor Red
                     WaitForKeyAndExit -ExitCode 1
                 }
             }
         } catch {
-            Write-Host "`n?? ·À¶ÏÁª¼ì²âÒì³££º$_" -ForegroundColor Red
-            Write-Host "[×îÖÕ½á¹û] ¼ì²âÒì³££¬½Å±¾ÍË³ö" -ForegroundColor Red
+            Write-Host "`n?? é˜²æ–­è”æ£€æµ‹å¼‚å¸¸ï¼š$_" -ForegroundColor Red
+            Write-Host "[æœ€ç»ˆç»“æœ] æ£€æµ‹å¼‚å¸¸ï¼Œè„šæœ¬é€€å‡º" -ForegroundColor Red
             WaitForKeyAndExit -ExitCode 1
         }
     }
 } else {
-    Write-Host "`n?? ÒÑÑ¡Ôñ²»¿ªÆô·À¶ÏÁª£¬½Å±¾Õı³£ÍË³ö" -ForegroundColor Green
+    Write-Host "`n?? å·²é€‰æ‹©ä¸å¼€å¯é˜²æ–­è”ï¼Œè„šæœ¬æ­£å¸¸é€€å‡º" -ForegroundColor Green
     WaitForKeyAndExit -ExitCode 0
 }
