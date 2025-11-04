@@ -1,0 +1,424 @@
+# 广东科技学院(南城校区)校园网一键认证登录脚本
+param(
+    [switch]$y,  # 自动开启防断联
+    [switch]$n   # 自动关闭防断联（与-y互斥）
+)
+
+Add-Type -AssemblyName System.Web
+
+# --------------------------
+# 工具函数1：按任意键退出
+# --------------------------
+function WaitForKeyAndExit {
+    param([int]$ExitCode = 0)
+    Write-Host "`n按任意键退出..." -ForegroundColor Cyan
+    $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+    Exit $ExitCode
+}
+
+# --------------------------
+# 工具函数2：参数冲突检查
+# --------------------------
+function Check-ParamConflict {
+    if ($y -and $n) {
+        Write-Host "?? 错误：-y和-n参数不能同时使用，请仅选择其中一个" -ForegroundColor Red
+        WaitForKeyAndExit -ExitCode 1
+    }
+}
+
+# --------------------------
+# 工具函数3：读取/保存账号密码（修复路径获取问题）
+# --------------------------
+function Get-AccountInfo {
+    # 初始化账号密码变量（此处会被脚本自动替换为用户输入的值）
+    $savedUsername = ""
+    $savedPassword = ""
+
+    # 若已保存账号密码，直接返回
+    if (-not [string]::IsNullOrWhiteSpace($savedUsername) -and -not [string]::IsNullOrWhiteSpace($savedPassword)) {
+        return $savedUsername, $savedPassword
+    }
+
+    # 未保存时提示用户输入
+    Write-Host "`n检测到未保存账号密码，请输入校园网认证信息" -ForegroundColor Cyan
+    $username = Read-Host "请输入账号（通常为学号）"
+    while ([string]::IsNullOrWhiteSpace($username)) {
+        Write-Host "?? 账号不能为空！" -ForegroundColor Red
+        $username = Read-Host "请重新输入账号"
+    }
+
+    $password = Read-Host "请输入密码" -AsSecureString
+    $passwordPlain = [System.Net.NetworkCredential]::new("", $password).Password
+    while ([string]::IsNullOrWhiteSpace($passwordPlain)) {
+        Write-Host "?? 密码不能为空！" -ForegroundColor Red
+        $password = Read-Host "请重新输入密码" -AsSecureString
+        $passwordPlain = [System.Net.NetworkCredential]::new("", $password).Password
+    }
+
+    # 修复：可靠获取脚本路径（兼容所有环境）
+    try {
+        # 方法1：优先使用$PSCommandPath（PowerShell 3.0+更可靠）
+        if (-not [string]::IsNullOrWhiteSpace($PSCommandPath)) {
+            $scriptPath = $PSCommandPath
+        }
+        # 方法2： fallback到$MyInvocation（兼容低版本）
+        else {
+            $scriptPath = $MyInvocation.MyCommand.Path
+        }
+
+        # 验证路径是否有效
+        if (-not (Test-Path -Path $scriptPath -PathType Leaf)) {
+            throw "脚本路径无效，请手动保存账号密码"
+        }
+
+        # 读取脚本内容（兼容所有版本）
+        $scriptContent = (Get-Content -Path $scriptPath) -join "`n"
+
+        # 替换账号密码（精确匹配变量行）
+        $updatedContent = $scriptContent -replace '(?m)^(\s*)\$savedUsername\s*=\s*""', "`$1`$savedUsername = `"$username`"" `
+                                        -replace '(?m)^(\s*)\$savedPassword\s*=\s*""', "`$1`$savedPassword = `"$passwordPlain`""
+
+        # 写入脚本
+        Set-Content -Path $scriptPath -Value $updatedContent -Force
+        Write-Host "?? 账号密码已保存，下次运行无需重复输入" -ForegroundColor Green
+    } catch {
+        Write-Host "???? 警告：自动保存失败，请手动修改脚本保存账号密码" -ForegroundColor Yellow
+        Write-Host "   错误原因：$_" -ForegroundColor Yellow
+        Write-Host "   手动修改方法：用记事本打开脚本，找到以下两行并填入信息：" -ForegroundColor Yellow
+        Write-Host "   `$savedUsername = `"你的账号`"" -ForegroundColor Yellow
+        Write-Host "   `$savedPassword = `"你的密码`"" -ForegroundColor Yellow
+    }
+
+    return $username, $passwordPlain
+}
+
+# --------------------------
+# 工具函数4：提取服务器返回中文
+# --------------------------
+function Get-ChineseContent {
+    param([string]$InputContent)
+    $cleanContent = $InputContent -replace "<.*?>", "" `
+        -replace '"微软雅黑"|"宋体"|"黑体|Helvetica|Arial|sans-serif', "" `
+        -replace '""|,""|,"|[a-zA-Z0-9_./?&=;:+-]+', "" `
+        -replace "\s+", " " `
+        -replace '[^\u4e00-\u9fa5，。！；：""''（）【】、… ]', ""
+    $cleanContent = $cleanContent.Trim()
+    
+    $chinesePattern = '([\u4e00-\u9fa5，。！；：""''（）【】、… ]{2,})'
+    $chineseMatches = [regex]::Matches($cleanContent, $chinesePattern)
+    $chineseContent = $chineseMatches | ForEach-Object { $_.Value.Trim() } | Where-Object { $_ -ne "" } | Select-Object -Unique
+    return $chineseContent -join "；"
+}
+
+# --------------------------
+# 工具函数5：核心认证流程
+# --------------------------
+function Start-AuthFlow {
+    param(
+        [string]$Username,
+        [string]$Password,
+        [string]$Basip = "172.18.100.100",
+        [bool]$IsReconnect = $false
+    )
+
+    # 步骤1：获取网卡信息
+    try {
+        $adapter = Get-NetAdapter | Where-Object {
+            ($_.InterfaceDescription -match "WLAN" -or $_.InterfaceDescription -match "Ethernet") -and
+            $_.InterfaceDescription -notmatch "vEthernet" -and
+            $_.Status -eq "Up"
+        } | ForEach-Object {
+            $ipv4Addr = $_ | Get-NetIPAddress -AddressFamily IPv4 -ErrorAction SilentlyContinue
+            if ($ipv4Addr) {
+                $_ | Add-Member -NotePropertyName "IPv4Address" -NotePropertyValue $ipv4Addr.IPAddress -PassThru
+            }
+        } | Select-Object -First 1
+
+        if (-not $adapter) {
+            Write-Host "[错误] 未找到可用网卡（需WLAN/以太网+IPv4+非vEthernet）" -ForegroundColor Red
+            return $false, $null, $null
+        }
+
+        $wlanUserIp = $adapter.IPv4Address
+        $clientMac = $adapter.MacAddress
+        $timestamp = [Math]::Floor([decimal](Get-Date -UFormat %s))
+        
+        # 区分首次认证和重连的基础信息提示
+        if ($IsReconnect) {
+            Write-Host "[重连-基础信息] 网卡：$($adapter.InterfaceDescription) | IP：$wlanUserIp | MAC：$clientMac" -ForegroundColor Cyan
+        } else {
+            Write-Host "[首次认证-基础信息] 网卡：$($adapter.InterfaceDescription) | IP：$wlanUserIp | MAC：$clientMac" -ForegroundColor Cyan
+        }
+    } catch {
+        Write-Host "[错误] 获取网卡参数失败：$_" -ForegroundColor Red
+        return $false, $null, $null
+    }
+
+    # 步骤2：初始认证（获取二次认证地址）
+    $webSession = New-Object Microsoft.PowerShell.Commands.WebRequestSession
+    $ajaxUrlFromForm = $null
+    try {
+        $mainUrl = "http://8.135.34.165/lfradius/libs/portal/unify/portal.php/login/main/nasid/1/?" +
+            "wlanuserip=$wlanUserIp&wlanacname=gdkjxy&clientip=$wlanUserIp&clientmac=$clientMac&" +
+            "paip=$Basip&vlan=3001.0&iarmdst=www.qq.com/?time=$timestamp"
+
+        $postParams = @{
+            usrname = $Username
+            passwd = $Password
+            treaty = "on"
+            nasid = "1"
+            usrmac = $clientMac
+            usrip = $wlanUserIp
+            basip = $Basip
+            success = "http://8.135.34.165/lfradius/libs/portal/unify/portal.php/login/success"
+            fail = "http://8.135.34.165/lfradius/libs/portal/unify/portal.php/login/fail"
+        }
+
+        # 构造POST请求体
+        $encodedKeyValues = @()
+        foreach ($key in $postParams.Keys) {
+            $encodedValue = [System.Web.HttpUtility]::UrlEncode($postParams[$key])
+            $encodedKeyValues += "$key=$encodedValue"
+        }
+        $encodedBody = $encodedKeyValues -join "&"
+
+        # 区分首次认证和重连的步骤提示
+        if ($IsReconnect) {
+            Write-Host "[重连-步骤1] 发送认证请求..." -ForegroundColor Cyan
+        } else {
+            Write-Host "[首次认证-步骤1] 发送初始认证请求..." -ForegroundColor Cyan
+        }
+        
+        $response1 = Invoke-WebRequest -Uri "http://8.135.34.165/lfradius/libs/portal/unify/portal.php/login/Panabit_login" `
+            -Method Post `
+            -Body $encodedBody `
+            -Headers @{ 
+                Referer = $mainUrl 
+                "User-Agent" = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/142.0.0.0" 
+                "Content-Type" = "application/x-www-form-urlencoded"
+            } `
+            -WebSession $webSession `
+            -TimeoutSec 30 `
+            -ErrorAction Stop
+
+        if ($response1.StatusCode -eq 200) {
+            $serverContent1 = if ($response1.Content -is [byte[]]) {
+                try { [System.Text.Encoding]::GetEncoding("gbk").GetString($response1.Content) }
+                catch { [System.Text.Encoding]::UTF8.GetString($response1.Content) }
+            } else { $response1.Content }
+
+            $chineseTip1 = Get-ChineseContent -InputContent $serverContent1
+            if ($chineseTip1) { 
+                if ($IsReconnect) {
+                    Write-Host "[重连-服务器提示] $chineseTip1" -ForegroundColor Magenta
+                } else {
+                    Write-Host "[首次认证-服务器提示] $chineseTip1" -ForegroundColor Magenta
+                }
+            }
+
+            # 提取二次认证地址
+            if ($serverContent1 -match '<form name="login" action="([^"]+)" method="post"') {
+                $ajaxUrlFromForm = $matches[1]
+                if ($IsReconnect) {
+                    Write-Host "[重连-基础信息] 提取认证地址：$ajaxUrlFromForm" -ForegroundColor Cyan
+                } else {
+                    Write-Host "[首次认证-基础信息] 提取二次认证地址：$ajaxUrlFromForm" -ForegroundColor Cyan
+                }
+            }
+        } else {
+            throw "认证失败，状态码：$($response1.StatusCode)"
+        }
+    } catch {
+        Write-Host "[错误] 认证请求失败：$_" -ForegroundColor Red
+        return $false, $null, $null
+    }
+
+    # 步骤3：二次认证（核心登录）
+    try {
+        $ajaxParams = @{
+            action = "login"
+            user = $Username
+            pwd = $Password
+            usrmac = $clientMac
+            ip = $wlanUserIp
+            success = $postParams.success
+            fail = $postParams.fail
+        }
+
+        # 构造POST请求体
+        $ajaxKeyValues = @()
+        foreach ($key in $ajaxParams.Keys) {
+            $encodedVal = [System.Web.HttpUtility]::UrlEncode($ajaxParams[$key])
+            $ajaxKeyValues += "$key=$encodedVal"
+        }
+        $ajaxBody = $ajaxKeyValues -join "&"
+
+        $ajaxUrl = if ($ajaxUrlFromForm) { $ajaxUrlFromForm } else { "http://172.18.100.100:8010/cgi-bin/webauth/ajax_webauth" }
+        
+        # 区分首次认证和重连的步骤提示
+        if ($IsReconnect) {
+            Write-Host "[重连-步骤2] 发送登录请求..." -ForegroundColor Cyan
+        } else {
+            Write-Host "[首次认证-步骤2] 发送二次认证请求..." -ForegroundColor Cyan
+        }
+        
+        $response2 = Invoke-WebRequest -Uri $ajaxUrl `
+            -Method Post `
+            -Body $ajaxBody `
+            -Headers @{ 
+                Referer = "http://8.135.34.165/" 
+                Origin = "http://8.135.34.165" 
+                "User-Agent" = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/142.0.0.0" 
+                "Content-Type" = "application/x-www-form-urlencoded"
+            } `
+            -WebSession $webSession `
+            -TimeoutSec 30 `
+            -ErrorAction Stop
+
+        $serverContent2 = if ($response2.Content -is [byte[]]) {
+            try { [System.Text.Encoding]::GetEncoding("GB2312").GetString($response2.Content) }
+            catch { [System.Text.Encoding]::UTF8.GetString($response2.Content) }
+        } else { $response2.Content }
+
+        $chineseTip2 = Get-ChineseContent -InputContent $serverContent2
+        if ($chineseTip2) { 
+            if ($IsReconnect) {
+                Write-Host "[重连-服务器提示] $chineseTip2" -ForegroundColor Magenta
+            } else {
+                Write-Host "[首次认证-服务器提示] $chineseTip2" -ForegroundColor Magenta
+            }
+        }
+
+        # 区分首次认证和重连的结果提示
+        if ($IsReconnect) {
+            Write-Host "[重连-结果] 登录成功" -ForegroundColor Green
+        } else {
+            Write-Host "[首次认证-结果] 二次认证成功" -ForegroundColor Green
+        }
+        return $true, $wlanUserIp, $clientMac
+    } catch {
+        Write-Host "[错误] 登录请求失败：$_" -ForegroundColor Red
+        return $false, $null, $null
+    }
+}
+
+# --------------------------
+# 主流程：参数检查+账号密码获取+认证
+# --------------------------
+Check-ParamConflict
+
+# 获取账号密码（首次输入后自动保存）
+$usrname, $passwordPlain = Get-AccountInfo
+
+# 调用认证函数执行首次认证
+$firstAuthSuccess, $userIp, $userMac = Start-AuthFlow -Username $usrname -Password $passwordPlain -Basip "172.18.100.100" -IsReconnect $false
+if (-not $firstAuthSuccess) {
+    Write-Host "[最终结果] 首次认证失败，脚本退出" -ForegroundColor Red
+    WaitForKeyAndExit -ExitCode 1
+}
+
+# --------------------------
+# 步骤4：curl验证网络连通性
+# --------------------------
+Write-Host "`n==================================================" -ForegroundColor Cyan
+Write-Host "正在验证网络连通性（curl请求bing.com）..." -ForegroundColor Cyan
+$curlSuccess = $false
+try {
+    $curlPath = "C:\Windows\System32\curl.exe"
+    $curlArgs = @("-I", "-m", "5", "-s", "-w", "%{http_code}", "https://bing.com")
+    $curlOutput = & $curlPath $curlArgs 2>&1
+
+    if ($curlOutput -match '^(200|3\d{2})$') {
+        Write-Host "?? 首次认证成功！网络已连通（HTTP状态码：$matches[0]）" -ForegroundColor Green
+        Write-Host "?? 认证信息：" -ForegroundColor Cyan
+        Write-Host "   账号：$usrname" -ForegroundColor Cyan
+        Write-Host "   IP地址：$userIp" -ForegroundColor Cyan
+        Write-Host "   MAC地址：$userMac" -ForegroundColor Cyan
+        $curlSuccess = $true
+    } else {
+        $errorMsg = if ($curlOutput -is [Management.Automation.ErrorRecord]) { $curlOutput.Exception.Message } else { "HTTP状态码：$curlOutput" }
+        Write-Host "?? 首次认证失败！网络未连通：$errorMsg" -ForegroundColor Red
+    }
+} catch {
+    Write-Host "?? 首次认证失败！curl执行异常：$_" -ForegroundColor Red
+}
+Write-Host "==================================================" -ForegroundColor Cyan
+
+# 若curl验证失败，按任意键退出
+if (-not $curlSuccess) {
+    WaitForKeyAndExit -ExitCode 1
+}
+
+# --------------------------
+# 防断联逻辑（支持-y/-n参数，新增交互式y的反馈）
+# --------------------------
+if ($y) {
+    Write-Host "`n检测到参数-y，成功开启防断联进程！（正常无输出，仅错误时提醒，按 Ctrl+C 退出）" -ForegroundColor Green
+    Write-Host "==================================================" -ForegroundColor Cyan
+    $startAntiDisconnect = $true
+} elseif ($n) {
+    Write-Host "`n检测到参数-n，自动不开启防断联进程，脚本退出" -ForegroundColor Green
+    $startAntiDisconnect = $false
+} else {
+    do {
+        Write-Host "`n是否开启防断联进程？（正常无提示，仅错误时提醒，按 Ctrl+C 退出）[Y/N]" -ForegroundColor Cyan
+        $userInput = Read-Host "请输入 Y 或 N"
+        $userInput = $userInput.Trim().ToUpper()
+        if ($userInput -notin "Y", "N") {
+            Write-Host "?? 输入无效！请仅输入 Y（是）或 N（否）" -ForegroundColor Red
+        }
+    } while ($userInput -notin "Y", "N")
+    
+    if ($userInput -eq "Y") {
+        $startAntiDisconnect = $true
+        # 新增：交互式输入y时的反馈提示
+        Write-Host "`n?? 成功开启防断联进程！（正常无输出，仅错误时提醒，按 Ctrl+C 退出）" -ForegroundColor Green
+        Write-Host "==================================================" -ForegroundColor Cyan
+    } else {
+        $startAntiDisconnect = $false
+    }
+}
+
+# 执行防断联或退出
+if ($startAntiDisconnect) {
+    while ($true) {
+        Start-Sleep -Seconds 5
+        try {
+            $curlOutputLoop = & $curlPath $curlArgs 2>&1
+            if (-not ($curlOutputLoop -match '^(200|3\d{2})$')) {
+                Write-Host "`n==================================================" -ForegroundColor Red
+                Write-Host "?? 网络断开！开始尝试重连..." -ForegroundColor Red
+                Write-Host "==================================================" -ForegroundColor Red
+                
+                $reconnectSuccess, $reconnectIp, $reconnectMac = Start-AuthFlow -Username $usrname -Password $passwordPlain -Basip "172.18.100.100" -IsReconnect $true
+                
+                if ($reconnectSuccess) {
+                    $reconnectCurl = & $curlPath $curlArgs 2>&1
+                    if ($reconnectCurl -match '^(200|3\d{2})$') {
+                        Write-Host "`n?? 重连成功！网络已恢复" -ForegroundColor Green
+                        Write-Host "?? 当前连接信息：" -ForegroundColor Cyan
+                        Write-Host "   账号：$usrname" -ForegroundColor Cyan
+                        Write-Host "   IP地址：$reconnectIp" -ForegroundColor Cyan
+                        Write-Host "   MAC地址：$reconnectMac" -ForegroundColor Cyan
+                        Write-Host "==================================================" -ForegroundColor Green
+                    } else {
+                        Write-Host "`n?? 重连失败！网络仍未连通" -ForegroundColor Red
+                        Write-Host "[最终结果] 重连失败，脚本退出" -ForegroundColor Red
+                        WaitForKeyAndExit -ExitCode 1
+                    }
+                } else {
+                    Write-Host "`n?? 重连失败！认证流程执行错误" -ForegroundColor Red
+                    Write-Host "[最终结果] 重连失败，脚本退出" -ForegroundColor Red
+                    WaitForKeyAndExit -ExitCode 1
+                }
+            }
+        } catch {
+            Write-Host "`n?? 防断联检测异常：$_" -ForegroundColor Red
+            Write-Host "[最终结果] 检测异常，脚本退出" -ForegroundColor Red
+            WaitForKeyAndExit -ExitCode 1
+        }
+    }
+} else {
+    Write-Host "`n?? 已选择不开启防断联，脚本正常退出" -ForegroundColor Green
+    WaitForKeyAndExit -ExitCode 0
+}
