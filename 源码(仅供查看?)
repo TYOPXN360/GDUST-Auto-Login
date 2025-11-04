@@ -111,7 +111,7 @@ function Get-ChineseContent {
 }
 
 # --------------------------
-# 工具函数5：核心认证流程
+# 工具函数5：核心认证流程（优化网卡匹配逻辑）
 # --------------------------
 function Start-AuthFlow {
     param(
@@ -121,21 +121,25 @@ function Start-AuthFlow {
         [bool]$IsReconnect = $false
     )
 
-    # 步骤1：获取网卡信息
+    # 步骤1：获取网卡信息（关键优化：排除Hyper-V虚拟网卡，支持Wi-Fi名称匹配）
     try {
         $adapter = Get-NetAdapter | Where-Object {
-            ($_.InterfaceDescription -match "WLAN" -or $_.InterfaceDescription -match "Ethernet") -and
-            $_.InterfaceDescription -notmatch "vEthernet" -and
+            # 匹配物理网卡：Wi-Fi/WLAN（无线）或Ethernet（有线）
+            ($_.InterfaceDescription -match "WLAN|Wi-Fi" -or $_.InterfaceDescription -match "Ethernet") -and
+            # 排除虚拟网卡：Hyper-V相关或vEthernet（虚拟交换机）
+            $_.InterfaceDescription -notmatch "Hyper-V|vEthernet" -and
+            # 确保网卡状态为启用
             $_.Status -eq "Up"
         } | ForEach-Object {
+            # 获取IPv4地址（忽略无IP的网卡）
             $ipv4Addr = $_ | Get-NetIPAddress -AddressFamily IPv4 -ErrorAction SilentlyContinue
             if ($ipv4Addr) {
                 $_ | Add-Member -NotePropertyName "IPv4Address" -NotePropertyValue $ipv4Addr.IPAddress -PassThru
             }
-        } | Select-Object -First 1
+        } | Select-Object -First 1  # 优先选择第一个符合条件的网卡
 
         if (-not $adapter) {
-            Write-Host "[错误] 未找到可用网卡（需WLAN/以太网+IPv4+非vEthernet）" -ForegroundColor Red
+            Write-Host "[错误] 未找到可用网卡（需启用Wi-Fi/WLAN/以太网，且排除Hyper-V虚拟网卡）" -ForegroundColor Red
             return $false, $null, $null
         }
 
